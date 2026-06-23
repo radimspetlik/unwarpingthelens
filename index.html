@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Unwarping the Lens: A Physics-Grounded Approach to Video Glasses Removal</title>
+  <meta name="description" content="A physics-grounded framework for high-fidelity, temporally consistent eyeglasses removal from video. ECCV 2026." />
+  <meta property="og:title" content="Unwarping the Lens: Video Glasses Removal" />
+  <meta property="og:description" content="A physics-grounded transfer framework for high-fidelity, temporally consistent eyeglasses removal from video." />
+  <meta property="og:image" content="static/images/teaser/ours.png" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="stylesheet" href="static/css/style.css" />
+</head>
+<body>
+
+<!-- ===================== HERO ===================== -->
+<header class="hero">
+  <div class="wrap">
+    <span class="venue">ECCV 2026</span>
+    <h1 class="title">Unwarping the Lens<span class="sub">A Physics-Grounded Approach to Video Glasses Removal</span></h1>
+
+    <div class="authors">
+      <a href="https://orcid.org/0000-0002-1423-7549">Radim Špetlík</a><sup>1,*</sup>,
+      <a href="https://orcid.org/0000-0003-3254-0290">David Futschik</a><sup>2</sup>,
+      <a href="https://orcid.org/0000-0002-1651-030X">Radek Daněček</a><sup>2</sup>,
+      Feitong Tan<sup>2</sup>,
+      Ziqian Bai<sup>2</sup>,
+      Rohit Pandey<sup>2</sup>,
+      Yinda Zhang<sup>2</sup>
+    </div>
+    <div class="affil"><sup>1</sup>Czech Technical University in Prague, FEE &nbsp;&middot;&nbsp; <sup>2</sup>Google</div>
+    <div class="note"><sup>*</sup>Work done while at Google.</div>
+
+    <div class="buttons">
+      <a class="btn disabled" href="#"><span class="ico">&#128196;</span> Paper</a>
+      <a class="btn disabled" href="#"><span class="ico">&#10003;</span> arXiv</a>
+      <a class="btn disabled" href="#"><span class="ico">&#128187;</span> Code</a>
+      <a class="btn disabled" href="#"><span class="ico">&#128202;</span> Dataset</a>
+      <a class="btn" href="#bibtex"><span class="ico">&#128221;</span> BibTeX</a>
+    </div>
+    <div class="note" style="margin-top:14px;">Code and dataset will be released upon publication.</div>
+  </div>
+</header>
+
+<!-- ===================== TEASER ===================== -->
+<section id="teaser">
+  <div class="wrap">
+    <figure>
+      <div class="compare-grid row4">
+        <div class="compare-card"><img src="static/images/teaser/input.png" alt="Input with glasses" /><div class="lab">Input (with glasses)</div></div>
+        <div class="compare-card"><img src="static/images/teaser/propainter.png" alt="ProPainter" /><div class="lab">ProPainter</div></div>
+        <div class="compare-card"><img src="static/images/teaser/gemini.png" alt="Nano Banana" /><div class="lab">Nano Banana</div></div>
+        <div class="compare-card ours"><img src="static/images/teaser/ours.png" alt="Ours (JFSnet)" /><div class="lab">Ours (JFSnet)</div></div>
+      </div>
+      <figcaption>
+        Eyeglasses are not opaque overlays &mdash; they introduce <strong>depth-dependent refractive distortion</strong> and
+        <strong>view-dependent specular reflections</strong>. Inpainting and generative baselines drift in identity, expression, and pose;
+        our method removes the lenses while preserving the subject and staying temporally stable across frames.
+      </figcaption>
+    </figure>
+
+    <div class="stats">
+      <div class="stat"><div class="num">27.68</div><div class="cap">FPS (real-time)</div></div>
+      <div class="stat"><div class="num">12,163</div><div class="cap">FFHQ eval images</div></div>
+      <div class="stat"><div class="num">1,860</div><div class="cap">curated identities</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== ABSTRACT ===================== -->
+<section id="abstract">
+  <div class="wrap">
+    <h2 class="section-title">Abstract</h2>
+    <div class="lead">
+      <p>
+        High-fidelity removal of eyeglasses from video is a major challenge in facial attribute editing, as the underlying
+        facial geometry is often obscured by complex refractive distortions and view-dependent specular reflections.
+        While large-scale generative priors have shown promise in eyeglasses removal via static image inpainting, they often
+        lack the structural constraints necessary to maintain identity, expression, and pose, leading to visible
+        &ldquo;identity drift&rdquo; in both static images and dynamic sequences.
+      </p>
+      <p>
+        We propose a transfer framework that addresses the stochastic nature of generative priors. Our pipeline first
+        extracts high-fidelity synthetic face images from a commercial-grade generative model (Nano Banana, Gemini 3 Pro
+        Image), regularizes them via a three-stage structural filtering process to preserve identity, expression, and pose,
+        and finally applies physically-based simulation of lens optics during training to provide diverse and realistic
+        paired data. This transfers Nano Banana's photo-realistic, multi-view knowledge into a specialized restoration
+        architecture, <strong>JFSnet</strong> (Joint Feature-Spatial network), which integrates DINOv2-based semantic features
+        with a convolutional decoder and uses translation-equivariance constraints to improve temporal consistency and
+        high-frequency detail.
+      </p>
+      <p>
+        On a curated FFHQ subset (12,163 images) our approach achieves high fidelity and structural accuracy while
+        maintaining <strong>27.68 FPS</strong>. In perceptual studies on CelebV-Text video sequences, our results are
+        consistently preferred over diffusion- and GAN-based baselines for ocular consistency, temporal stability, and
+        overall restoration quality.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== METHOD ===================== -->
+<section id="method">
+  <div class="wrap">
+    <h2 class="section-title">How it works</h2>
+    <div class="lead">
+      <p>
+        <strong>1. Curated generative data.</strong> We synthesize eyeglass-free and glasses-wearing identities in sets of 13
+        poses and expressions with Nano Banana, then apply a three-stage structural filter (background <em>L</em><sub>1</sub>
+        pose check, localized ocular/identity consistency, and a learned reconstruction threshold) to keep only high-fidelity,
+        well-aligned pairs.
+      </p>
+      <p>
+        <strong>2. Physically-grounded augmentation.</strong> During training we substitute the lens regions with a physical
+        simulation: refraction via ray-tracing through two spherical lens surfaces (Snell's law, radii from the diopter via
+        Vogel's Rule) plus HDR specular reflections sampled along the reflected view ray. This synthesizes diverse, realistic
+        optical effects far beyond what the generator produces on its own.
+      </p>
+      <p>
+        <strong>3. JFSnet restoration.</strong> A pre-trained DINOv2 (ViT-L/14) encoder supplies stable semantic features; a
+        ResNet-based convolutional decoder reconstructs fine detail. A global skip connection bypasses the latent bottleneck,
+        and a translation-equivariance loss enforces temporal stability without multi-frame inference or optical flow.
+      </p>
+    </div>
+
+    <figure style="margin-top:30px;">
+      <div class="compare-grid row4">
+        <div class="compare-card"><img src="static/images/refraction/pos1.png" alt="+1.0 D" /><div class="lab">+1.0 diopter</div></div>
+        <div class="compare-card"><img src="static/images/refraction/neg2.png" alt="-2.0 D" /><div class="lab">&minus;2.0 diopter</div></div>
+        <div class="compare-card"><img src="static/images/refraction/neg4.png" alt="-4.0 D" /><div class="lab">&minus;4.0 diopter</div></div>
+        <div class="compare-card"><img src="static/images/refraction/neg6.png" alt="-6.0 D" /><div class="lab">&minus;6.0 diopter</div></div>
+      </div>
+      <figcaption>Physically-based refraction augmentation: the same face rendered through prescription lenses of varying strength, producing realistic depth-dependent magnification and distortion as training signal.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===================== RESULTS: FFHQ ===================== -->
+<section id="results-ffhq">
+  <div class="wrap">
+    <h2 class="section-title">Results &mdash; Images (FFHQ)</h2>
+    <figure>
+      <div class="results-block compare-grid row5">
+        <div class="compare-card"><img src="static/images/ffhq/00000_00111_ref.png" alt="Input" /><div class="lab">Input</div></div>
+        <div class="compare-card"><img src="static/images/ffhq/00000_00111_propainter.png" alt="ProPainter" /><div class="lab">ProPainter</div></div>
+        <div class="compare-card"><img src="static/images/ffhq/00000_00111_ledits.png" alt="LEDITS" /><div class="lab">LEDITS</div></div>
+        <div class="compare-card"><img src="static/images/ffhq/00000_00111_gemini.png" alt="Nano Banana" /><div class="lab">Nano Banana</div></div>
+        <div class="compare-card ours"><img src="static/images/ffhq/00000_00111_jfs_1.png" alt="Ours" /><div class="lab">Ours</div></div>
+      </div>
+      <div class="results-block compare-grid row5">
+        <div class="compare-card"><img src="static/images/ffhq/02000_02356_ref.png" alt="Input" /><div class="lab">Input</div></div>
+        <div class="compare-card"><img src="static/images/ffhq/02000_02356_propainter.png" alt="ProPainter" /><div class="lab">ProPainter</div></div>
+        <div class="compare-card"><img src="static/images/ffhq/02000_02356_ledits.png" alt="LEDITS" /><div class="lab">LEDITS</div></div>
+        <div class="compare-card"><img src="static/images/ffhq/02000_02356_gemini.png" alt="Nano Banana" /><div class="lab">Nano Banana</div></div>
+        <div class="compare-card ours"><img src="static/images/ffhq/02000_02356_jfs_1.png" alt="Ours" /><div class="lab">Ours</div></div>
+      </div>
+      <div class="results-block compare-grid row5">
+        <div class="compare-card"><img src="static/images/ffhq/08000_08195_ref.png" alt="Input" /><div class="lab">Input</div></div>
+        <div class="compare-card"><img src="static/images/ffhq/08000_08195_propainter.png" alt="ProPainter" /><div class="lab">ProPainter</div></div>
+        <div class="compare-card"><img src="static/images/ffhq/08000_08195_ledits.png" alt="LEDITS" /><div class="lab">LEDITS</div></div>
+        <div class="compare-card"><img src="static/images/ffhq/08000_08195_gemini.png" alt="Nano Banana" /><div class="lab">Nano Banana</div></div>
+        <div class="compare-card ours"><img src="static/images/ffhq/08000_08195_jfs_1.png" alt="Ours" /><div class="lab">Ours</div></div>
+      </div>
+      <figcaption>Glasses removal on the curated FFHQ subset. Baselines hallucinate eye structure or leave frame/reflection residue; our method recovers clean, identity-consistent faces.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===================== RESULTS: CelebV ===================== -->
+<section id="results-celebv">
+  <div class="wrap">
+    <h2 class="section-title">Results &mdash; Video (CelebV-Text)</h2>
+    <figure>
+      <div class="results-block compare-grid row5">
+        <div class="compare-card"><img src="static/images/celebv/28gP2GYqZCs_1_0_ref.png" alt="Input" /><div class="lab">Input</div></div>
+        <div class="compare-card"><img src="static/images/celebv/28gP2GYqZCs_1_0_propainter.png" alt="ProPainter" /><div class="lab">ProPainter</div></div>
+        <div class="compare-card"><img src="static/images/celebv/28gP2GYqZCs_1_0_toe.png" alt="ToE" /><div class="lab">ToE</div></div>
+        <div class="compare-card"><img src="static/images/celebv/28gP2GYqZCs_1_0_ia.png" alt="STTN" /><div class="lab">STTN</div></div>
+        <div class="compare-card ours"><img src="static/images/celebv/28gP2GYqZCs_1_0_jfs_1.png" alt="Ours" /><div class="lab">Ours</div></div>
+      </div>
+      <div class="results-block compare-grid row5">
+        <div class="compare-card"><img src="static/images/celebv/ACZ31UKbtzI_2_0_ref.png" alt="Input" /><div class="lab">Input</div></div>
+        <div class="compare-card"><img src="static/images/celebv/ACZ31UKbtzI_2_0_propainter.png" alt="ProPainter" /><div class="lab">ProPainter</div></div>
+        <div class="compare-card"><img src="static/images/celebv/ACZ31UKbtzI_2_0_toe.png" alt="ToE" /><div class="lab">ToE</div></div>
+        <div class="compare-card"><img src="static/images/celebv/ACZ31UKbtzI_2_0_ia.png" alt="STTN" /><div class="lab">STTN</div></div>
+        <div class="compare-card ours"><img src="static/images/celebv/ACZ31UKbtzI_2_0_jfs_1.png" alt="Ours" /><div class="lab">Ours</div></div>
+      </div>
+      <div class="results-block compare-grid row5">
+        <div class="compare-card"><img src="static/images/celebv/Ae-mH5FcsZM_1_4_ref.png" alt="Input" /><div class="lab">Input</div></div>
+        <div class="compare-card"><img src="static/images/celebv/Ae-mH5FcsZM_1_4_propainter.png" alt="ProPainter" /><div class="lab">ProPainter</div></div>
+        <div class="compare-card"><img src="static/images/celebv/Ae-mH5FcsZM_1_4_toe.png" alt="ToE" /><div class="lab">ToE</div></div>
+        <div class="compare-card"><img src="static/images/celebv/Ae-mH5FcsZM_1_4_ia.png" alt="STTN" /><div class="lab">STTN</div></div>
+        <div class="compare-card ours"><img src="static/images/celebv/Ae-mH5FcsZM_1_4_jfs_1.png" alt="Ours" /><div class="lab">Ours</div></div>
+      </div>
+      <figcaption>Per-frame glasses removal on CelebV-Text. Our translation-equivariance constraint keeps restored features coherent across frames, suppressing the flicker typical of frame-by-frame video-inpainting baselines.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===================== BIBTEX ===================== -->
+<section id="bibtex">
+  <div class="wrap">
+    <h2 class="section-title">BibTeX</h2>
+<pre class="bibtex">@inproceedings{spetlik2026unwarping,
+  title     = {Unwarping the Lens: A Physics-Grounded Approach to Video Glasses Removal},
+  author    = {{\v{S}}petl{\'i}k, Radim and Futschik, David and Dane{\v{c}}ek, Radek
+               and Tan, Feitong and Bai, Ziqian and Pandey, Rohit and Zhang, Yinda},
+  booktitle = {Proceedings of the European Conference on Computer Vision (ECCV)},
+  year      = {2026}
+}</pre>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>Website template adapted from the academic project-page style.
+       &copy; 2026 the authors. Page content licensed under
+       <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.</p>
+  </div>
+</footer>
+
+</body>
+</html>
